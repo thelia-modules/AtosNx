@@ -15,6 +15,8 @@ namespace AtosNx\EventListeners;
 use Atos\Atos;
 use AtosNx\AtosNx;
 use Thelia\Core\Event\Order\OrderEvent;
+use Thelia\Core\Event\TheliaEvents;
+use Thelia\Log\Tlog;
 
 /**
  * Class SendEmailConfirmation
@@ -38,6 +40,20 @@ class SendConfirmationEmail extends \Atos\EventListeners\SendConfirmationEmail
             if (! $order->isPaid() && $order->getPaymentModuleId() == AtosNx::getModuleId()) {
                 $event->stopPropagation();
             }
+        }
+    }
+
+    public function updateStatus(OrderEvent $event)
+    {
+        $order = $event->getOrder();
+
+        if ($order->isPaid() && $order->getPaymentModuleId() == AtosNx::getModuleId()) {
+            // Send confirmation email if required.
+            if (Atos::getConfigValue('send_confirmation_message_only_if_paid')) {
+                $event->getDispatcher()->dispatch(TheliaEvents::ORDER_SEND_CONFIRMATION_EMAIL, $event);
+            }
+
+            Tlog::getInstance()->debug("Confirmation email sent to customer " . $order->getCustomer()->getEmail());
         }
     }
 }
